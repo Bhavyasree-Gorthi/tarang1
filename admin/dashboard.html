@@ -49,7 +49,7 @@
             background-color: white;
             padding: 40px;
             border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 30px rgba(226, 102, 7, 0.1);
             width: 100%;
             max-width: 400px;
         }
@@ -57,7 +57,13 @@
         .login-form h2 {
             text-align: center;
             margin-bottom: 30px;
-            color: var(--secondary);
+            color: orange;
+        }
+
+        .login-form h4 {
+            text-align: center;
+            color: black;
+            margin-bottom: 30px;
         }
 
         .form-group {
@@ -144,7 +150,11 @@
         }
 
         .dashboard h1 {
-            color: var(--secondary);
+            color: var(--primary);
+        }
+
+        #deptTitle {
+            color: orange;
         }
 
         .logout-btn {
@@ -224,7 +234,8 @@
 <body>
     <div class="login-container" id="loginContainer">
         <form class="login-form" id="loginForm">
-            <h2>Admin Login</h2>
+            <h2>CIVIL Department</h2>
+            <h4>Coordinator Login</h4>
             <div class="form-group">
                 <input type="email" class="form-control" id="email" placeholder="Email" required>
             </div>
@@ -283,21 +294,15 @@
     </div>
 
     <script>
-        // Initialize Supabase
-        const supabaseUrl = 'https://mmbrwywesmbwsczuqiha.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1tYnJ3eXdlc21id3NjenVxaWhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkwNTUyNzEsImV4cCI6MjA3NDYzMTI3MX0.yW5NNNKUbR6X_OCj3xBlH50B2svp3f_B58-nR0NIKHs'; // Replace with your actual anon/public key from Supabase Settings > API
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
         const allowedEmails = ['deptcivil@srit.ac.in', 'eventadmin@srit.ac.in', 'principal@srit.ac.in'];
-        const password = '123456';
-        let userDept = 'Civil'; // Default
+        const correctPassword = '123456';
 
         const loginForm = document.getElementById('loginForm');
         const loginContainer = document.getElementById('loginContainer');
         const dashboard = document.getElementById('dashboard');
         const logoutBtn = document.getElementById('logoutBtn');
 
-        loginForm.addEventListener('submit', async (e) => {
+        loginForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const email = document.getElementById('email').value;
             const pass = document.getElementById('password').value;
@@ -307,193 +312,63 @@
                 return;
             }
 
-            try {
-                // Use Supabase Auth for login
-                const { data, error } = await supabase.auth.signInWithPassword({
-                    email: email,
-                    password: pass,
-                });
-
-                if (error) throw error;
-
-                // Fetch user department
-                const { data: userProfile } = await supabase
-                    .from('users')
-                    .select('department, role')
-                    .eq('email', data.user.email)
-                    .single();
-                userDept = userProfile?.department || 'Civil';
-                if (data.user.email === 'principal@srit.ac.in') {
-                    userDept = 'all';
-                }
-                if (userProfile?.role !== 'head' && data.user.email !== 'principal@srit.ac.in') {
-                    alert('Access denied. Must be department head.');
-                    return;
-                }
-
-                // Check if user is logged in and email matches allowed
-                if (data.user && allowedEmails.includes(data.user.email)) {
-                    document.getElementById('deptTitle').textContent = userDept === 'all' ? 'All' : userDept;
-                    loginContainer.style.display = 'none';
-                    dashboard.style.display = 'block';
-                    loadDashboardData();
-                } else {
-                    alert('Invalid credentials or unauthorized email.');
-                }
-            } catch (error) {
-                console.error('Login error:', error);
-                alert('Login failed. Please check your credentials.');
+            if (pass !== correctPassword) {
+                alert('Invalid password.');
+                return;
             }
+
+            document.getElementById('deptTitle').textContent = 'Civil';
+            loginContainer.style.display = 'none';
+            dashboard.style.display = 'block';
+            loadDashboardData();
         });
 
-        logoutBtn.addEventListener('click', async () => {
-            await supabase.auth.signOut();
+        logoutBtn.addEventListener('click', () => {
             dashboard.style.display = 'none';
             loginContainer.style.display = 'flex';
             document.getElementById('email').value = '';
             document.getElementById('password').value = '';
         });
 
-        async function loadDashboardData() {
-            try {
-                // Ensure user is authenticated
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user || !allowedEmails.includes(user.email)) {
-                    alert('Access denied. Please log in as an admin.');
-                    logoutBtn.click();
-                    return;
-                }
+        function loadDashboardData() {
+            // Load static events for Civil Department
+            const eventsList = document.getElementById('eventsList');
+            eventsList.innerHTML = '<li class="event-item">Paper Presentation - Apr 3 <span class="dept-badge">Civil</span></li><li class="event-item">Bridge Blitz - Apr 3 <span class="dept-badge">Civil</span></li>';
 
-                // Load events from Supabase (filtered by department)
-                const { data: events, error } = await supabase
-                    .from('events')
-                    .select('*')
-                    .eq('department', userDept)
-                    .order('date', { ascending: true });
+            document.getElementById('registrationsCount').textContent = 'Total Registrations: 150';
 
-                if (error) throw error;
+            // Load static payment details
+            const paymentsTable = document.getElementById('paymentsTable').querySelector('tbody');
+            paymentsTable.innerHTML = '<tr><td colspan="6">No payments found.</td></tr>';
 
-                const eventsList = document.getElementById('eventsList');
-                eventsList.innerHTML = '';
-                if (events && events.length > 0) {
-                    events.forEach(event => {
-                        const li = document.createElement('li');
-                        li.className = 'event-item';
-                        li.innerHTML = `<strong>${event.title || 'Untitled'}</strong> - ${event.date || 'No date'} <span class="dept-badge">${event.department}</span>`;
-                        eventsList.appendChild(li);
-                    });
-                } else {
-                    eventsList.innerHTML = '<li class="event-item">No events found.</li>';
-                }
-
-                // Load registrations count (filtered)
-                const { count, error: countError } = await supabase
-                    .from('registrations')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('department', userDept);
-
-                if (countError) throw countError;
-
-                document.getElementById('registrationsCount').textContent = `Total Registrations: ${count || 0}`;
-
-                // Load payment details table
-                const { data: regs } = await supabase
-                    .from('registrations')
-                    .select('*')
-                    .eq('department', userDept);
-
-                const paymentsTable = document.getElementById('paymentsTable').querySelector('tbody');
-                paymentsTable.innerHTML = '';
-                if (regs && regs.length > 0) {
-                    regs.forEach(reg => {
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                            <td>${reg.full_name || 'N/A'}</td>
-                            <td>${reg.event || 'N/A'}</td>
-                            <td>${reg.utr_number || 'N/A'}</td>
-                            <td>${reg.payment_screenshot_url ? `<a href="${reg.payment_screenshot_url}" target="_blank">View</a>` : 'N/A'}</td>
-                            <td>${reg.payment_status || 'pending'}</td>
-                            <td><button onclick="updateStatus('${reg.id}', 'approved')">Approve</button> <button onclick="updateStatus('${reg.id}', 'rejected')">Reject</button></td>
-                        `;
-                        paymentsTable.appendChild(row);
-                    });
-                } else {
-                    paymentsTable.innerHTML = '<tr><td colspan="6">No payments found.</td></tr>';
-                }
-
-                // Load analytics chart (if events exist)
-                if (events && events.length > 0) {
-                    const eventLabels = events.map(e => e.title);
-                    const regCounts = await Promise.all(events.map(async (e) => {
-                        const { count } = await supabase.from('registrations').select('*', { count: 'exact', head: true }).eq('event', e.title).eq('department', userDept);
-                        return count || 0;
-                    }));
-                    const ctx = document.getElementById('analyticsChart').getContext('2d');
-                    if (window.analyticsChart) {
-                        window.analyticsChart.destroy();
-                    }
-                    window.analyticsChart = new Chart(ctx, {
-                        type: 'pie',
-                        data: {
-                            labels: eventLabels,
-                            datasets: [{
-                                data: regCounts,
-                                backgroundColor: ['#ff6b00', '#ff8c33', '#cc5500', '#ff3b00']
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error('Error loading dashboard data:', error);
-                // Fallback to static data if Supabase not set up
-                document.getElementById('eventsList').innerHTML = '<li class="event-item">Paper Presentation - Apr 3 <span class="dept-badge">Civil</span></li><li class="event-item">Bridge Blitz - Apr 3 <span class="dept-badge">Civil</span></li>';
-                document.getElementById('registrationsCount').textContent = 'Total Registrations: 150';
+            // Load analytics chart
+            const ctx = document.getElementById('analyticsChart').getContext('2d');
+            if (window.analyticsChart) {
+                window.analyticsChart.destroy();
             }
+            window.analyticsChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Paper Presentation', 'Bridge Blitz'],
+                    datasets: [{
+                        data: [75, 75],
+                        backgroundColor: ['#ff6b00', '#ff8c33']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
         }
 
-        async function updateStatus(id, status) {
-            try {
-                const { error } = await supabase.from('registrations').update({ payment_status: status }).eq('id', id);
-                if (error) throw error;
-                loadDashboardData(); // Refresh
-            } catch (error) {
-                console.error('Error updating status:', error);
-                alert('Failed to update status.');
-            }
+        function updateStatus(id, status) {
+            alert('Status update not available without database.');
         }
 
-        async function exportCSV() {
-            try {
-                const { data } = await supabase.from('registrations').select('*').eq('department', userDept);
-                if (data && data.length > 0) {
-                    const csv = Papa.unparse(data);
-                    const blob = new Blob([csv], { type: 'text/csv' });
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `${userDept}-registrations.csv`;
-                    a.click();
-                    URL.revokeObjectURL(url);
-                } else {
-                    alert('No data to export.');
-                }
-            } catch (error) {
-                console.error('Error exporting CSV:', error);
-                alert('Failed to export CSV.');
-            }
+        function exportCSV() {
+            alert('Export not available without database.');
         }
-
-        // Listen for auth changes
-        supabase.auth.onAuthStateChange((event, session) => {
-            if (event === 'SIGNED_OUT') {
-                dashboard.style.display = 'none';
-                loginContainer.style.display = 'flex';
-            }
-        });
     </script>
 </body>
 </html>
